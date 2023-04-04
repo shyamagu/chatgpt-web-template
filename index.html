@@ -1,0 +1,111 @@
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./style.css">
+    <title>ChatGPT Chat Template</title>
+</head>
+
+<body>
+    <script type="importmap">
+        {
+          "imports": {
+            "vue": "https://cdn.jsdelivr.net/npm/vue@3.2/dist/vue.esm-browser.prod.js"
+          }
+        }
+    </script>
+
+    <div id="app">
+        <div class="main">
+            <h2 class="title">{ChatGPT Chat Template}</h2>
+            <!-- チャットフィールド -->
+            <div id="chatfield" class="chatfield">
+                <div v-for="message in messages" :class="['chat_'+message.role]">
+                    <pre class="chat_message">{{message.content}}</pre>
+                </div>
+                <div v-if="loading" class="loader"></div>
+            </div>
+            <!-- メッセージボックス -->
+            <textarea class="messagebox" title="chat" name="chat" id="chat" placeholder="メッセージを入力してください" v-model="message"></textarea>
+            <div class="messagebox_bottom">
+                <div v-if="error" class="error">{{error}}</div>
+                <button class="button_clear" type="button" @click="clear">履歴をクリア</button>
+                <button class="button_send" type="button" @click="send">メッセージを送信</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import {createApp, onUpdated} from "vue";
+
+        createApp({
+            setup(){
+                // チャットフィールドを最下部にスクロールする関数
+                const scrollBottom = () =>{
+                    const chatField = document.querySelector(".chatfield");
+                    if(chatField){
+                        const height = chatField.scrollHeight;
+                        chatField.scrollTo(0, height);
+                    }
+                }
+
+                // チャットフィールドを最下部にスクロールする
+                onUpdated(scrollBottom);
+                return {};
+            },
+            data() {
+                return {
+                    message: "",
+                    error: "",
+                    loading: false,
+                    messages: [],
+                }
+            },
+            methods: {
+                // 履歴をクリアする
+                clear() {
+                    this.messages = []
+                },
+                // メッセージを送信する
+                async send() {
+                    this.loading = true
+                    this.error = ""
+                    
+                    this.messages.push({
+                        "role": "user",
+                        "content":this.message,
+                    })
+                    this.message = ''
+
+                    try {
+                        // メッセージを送信する
+                        const res = await fetch("/message", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                messages: this.messages,
+                            }),
+                        });
+                        const json = await res.json();
+
+                        this.messages.push({
+                            "role": "assistant",
+                            "content":json.answer,
+                        })
+
+
+                    } catch (e) {
+                        this.error = "サーバ呼び出しでエラーが発生しました";
+                    }
+                    this.loading = false
+                }
+            }
+        }).mount("#app");
+    </script>
+
+</body>
+
+</html>
